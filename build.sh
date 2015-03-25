@@ -30,6 +30,15 @@ CONFIGURE=${CONFIGURE:-./configure}
 CONFIGURE_OPT="${CONFIGURE_OPT:---host=arm-apple-darwin --disable-shared --enable-static}"
 CONFIGURE_OPT_TARGET=--prefix
 
+BUILDER=${BUILDER:-make}
+BUILDER_OPT=${BUILDER_OPT:-}
+
+INSTALLER=${INSTALLER:-make}
+INSTALLER_OPT=${INSTALLER_OPT:-install}
+
+CLEANER=${CLEANER:-make}
+CLEANER_OPT=${CLEANER_OPT:-clean}
+
 ###########################################################################
 
 SDKVERSION=`xcrun -sdk iphoneos --show-sdk-version`
@@ -82,6 +91,8 @@ for ARCH in ${ARCHS}; do
     echo "Configuring for ${PLATFORM} ${SDKVERSION} ${ARCH}..."
     export CC="${BUILD_TOOLS}/usr/bin/gcc -arch ${ARCH} -isysroot ${CROSS_TOP}/SDKs/${CROSS_SDK} -miphoneos-version-min=7.0"
     export CXX="${BUILD_TOOLS}/usr/bin/g++ -arch ${ARCH} -isysroot ${CROSS_TOP}/SDKs/${CROSS_SDK} -miphoneos-version-min=7.0"
+    export OBJC="${CC}"
+    export OBJCXX="${CXX}"
     TARGET_DIRECTORY=${OBJECT_PREFIX}/${PLATFORM}${SDKVERSION}-${ARCH}.sdk
     mkdir -p "${TARGET_DIRECTORY}"
     LOG="${TARGET_DIRECTORY}/configure.log"
@@ -101,20 +112,20 @@ for ARCH in ${ARCHS}; do
     LOG="${TARGET_DIRECTORY}/build.log"
 
     if [ "$1" == "verbose" ]; then
-        make 2>&1 | tee "${LOG}"
+        ${BUILDER} ${BUILDER_OPT} 2>&1 | tee "${LOG}"
     else
-        make >"${LOG}" 2>&1
+        ${BUILDER} ${BUILDER_OPT} >"${LOG}" 2>&1
     fi
     
     if [ $? != 0 ]; then 
-        echo "Problem while make - Please check ${LOG}"
+        echo "Problem while build - Please check ${LOG}"
         exit 1
     fi
     
     echo "Installing library..."
     LOG="${TARGET_DIRECTORY}/install.log"
-    make install >"${LOG}" 2>&1
-    make clean >>"${LOG}" 2>&1
+    ${INSTALLER} ${INSTALLER_OPT} >"${LOG}" 2>&1
+    ${CLEANER} ${CLEANER_OPT} >>"${LOG}" 2>&1
 
     popd
 done
@@ -122,7 +133,11 @@ set -e
 
 echo "to build universal / fat binary..."
 echo "use lipo -create obj/<spec>/lib/<arch specific file>... -output lib/<universal file>"
-ls -rtl obj/*/lib/lib*.a
+ls -rtl "${OBJECT_PREFIX}"/*/lib/lib*.a
+
+echo "Preparing pkg-config file..."
+cp -R "${TARGET_DIRECTORY}"/lib/pkgconfig "${LIBRARY_DIRECTORY}"
+sed -i.bak 's!'"${TARGET_DIRECTORY}"'!'"${CURRENTPATH}"'!g' "${LIBRARY_DIRECTORY}"/pkgconfig/*.pc
 
 echo "Preparing header file...."
 cp -R ${TARGET_DIRECTORY}/include/ ${HEADER_DIRECTORY}
