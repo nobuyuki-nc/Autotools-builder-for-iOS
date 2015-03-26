@@ -131,7 +131,7 @@ for ARCH in ${ARCHS}; do
 done
 set -e
 
-echo "to build universal / fat binary..."
+echo "Building universal / fat binary..."
 for a in "${TARGET_DIRECTORY}"/lib/lib*.a; do
     archive=`basename "$a"`
     lipo -create "${OBJECT_PREFIX}"/*/lib/"$archive" -output "${LIBRARY_DIRECTORY}/$archive"
