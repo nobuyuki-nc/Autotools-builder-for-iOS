@@ -132,8 +132,10 @@ done
 set -e
 
 echo "to build universal / fat binary..."
-echo "use lipo -create obj/<spec>/lib/<arch specific file>... -output lib/<universal file>"
-ls -rtl "${OBJECT_PREFIX}"/*/lib/lib*.a
+for a in "${TARGET_DIRECTORY}"/lib/lib*.a; do
+    archive=`basename "$a"`
+    lipo -create "${OBJECT_PREFIX}"/*/lib/"$archive" -output "${LIBRARY_DIRECTORY}/$archive"
+done
 
 echo "Preparing pkg-config file..."
 cp -R "${TARGET_DIRECTORY}"/lib/pkgconfig "${LIBRARY_DIRECTORY}"
